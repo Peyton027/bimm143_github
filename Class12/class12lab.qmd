@@ -1,0 +1,207 @@
+---
+title: "Class 12 Lab"
+author: "Peyton Chiu (PID:18145937)"
+format: html
+toc: true
+---
+
+
+## Background 
+Today will analyze some RNASeq data from Himes et al. on the effects of a common steroid (dexamethsaone) on airway smooth muscles cells 
+
+Our starting poin the "counts" data and "metadata" that contain the count values for each gene in their different expiriments (cells lines with or w/o the drug treatment)
+```{r}
+
+counts <- read.csv("airway_scaledcounts.csv", row.names=1)
+metadata <-  read.csv("airway_metadata.csv")
+```
+
+
+```{r}
+head(counts)
+
+```
+
+
+```{r}
+dim(counts)
+nrow(counts)
+```
+
+
+>Q1. How many genes are in this dataset? 
+
+There are 38694 genes in the dataset 
+
+```{r}
+head(metadata)
+
+```
+
+
+```{r}
+sum(metadata$dex =="control")
+```
+
+
+>Q2. How many ‘control’ cell lines do we have?
+
+There are 4 control lines
+
+## Toy differential gene expression 
+
+To start ur analysis let's caluclate the mean count countrs for all genes in the "countrol" expiriments 
+
+1.Extract all "control" columns for the `counts` object 2. Calculate the mean for all rows (genes) of thesse "control" columns 
+
+3-4: Repeat 1 and 2 for treatment 
+5. compare these mean values
+
+
+```{r}
+control.inds <- metadata$dex == "control"
+control.counts <- counts[,control.inds]
+control.mean <-rowMeans(control.counts)
+ 
+```
+
+
+>Q3:How would you make the above code in either approach more robust? Is there a function that could help here?How would you make the above code in either approach more robust? Is there a function that could help here?
+
+Yes, you can make it more robust by utilizing the rowMeans function which reducess the total number of steps in your code while also reducing the error if say you add another control or treated line. 
+
+
+>Q4. Follow the same procedure for the treated samples (i.e. calculate the mean per gene across drug treated samples and assign to a labeled vector called treated.mean)
+
+```{r}
+treated.ids <- metadata$dex == "treated"
+treated.counts <-counts[,treated.ids]
+treated.mean <- rowMeans(treated.counts)
+
+```
+
+Store the mean values together for bookkeeping 
+
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+head(meancounts)
+```
+
+>Q5 (a). Create a scatter plot showing the mean of the treated samples against the mean of the control samples. Your plot should look something like the following.
+
+```{r}
+meancounts <- data.frame(control.mean, treated.mean)
+plot(meancounts)
+```
+
+
+>Q5 (b).You could also use the ggplot2 package to make this figure producing the plot below. What geom_?() function would you use for this plot?
+
+```{r}
+library(ggplot2)
+ggplot(meancounts, aes(control.mean, treated.mean))+
+  geom_point() 
+  
+
+```
+
+Making this a log plot 
+```{r}
+library(ggplot2)
+ggplot(meancounts, aes(control.mean, treated.mean))+
+  geom_point() +
+  scale_x_log10()+
+  scale_y_log10()
+```
+
+We often talk about metrics like log2fold change
+
+```{r}
+#treated/control
+log2(10/10)
+log2(10/20)
+log2(1/4)
+
+```
+
+Let's calculate the log2 fold change for our treated over control mean counts
+
+```{r}
+meancounts$log2fc <- log2(meancounts$treated.mean/meancounts$control.mean)
+
+```
+
+```{r}
+head(meancounts)
+```
+
+A common rule of thumb is log2 fold change cutoff +2 or -2 to call genes either up regulated or down regulated
+
+```{r}
+# the number of upregulated genes 
+sum(meancounts$log2fc > +2, na.rm =T)
+
+# number of downregulated genes 
+sum(meancounts$log2fc > -2, na.rm =T)
+```
+
+
+>Q8. Using the up.ind vector above can you determine how many up regulated genes we have at the greater than 2 fc level? 
+
+There are 1846 upregulated genes 
+
+>Q9. Using the down.ind vector above can you determine how many down regulated genes we have at the greater than 2 fc level? 
+
+There are 22928 down regulated genes 
+
+>Q10. Do you trust these results? Why or why not?
+
+I do not trust these results as they were formed from calculating the mean difference between the treat and control numbers. However the mean is susceptible to outliers which can skew the overall value in one direction. This can make mean differences much lower or higher than in reality.
+
+
+##DeSeq2 Analysis 
+
+```{r, message=FALSE}
+library(DESeq2)
+```
+
+
+For DESeq analysis we need three things 
+-count values(`contData`)  
+- metadata telling us about the columns in `contData`(`colData`)
+-design of the expiriment (what do you want to compare)
+
+Our first function from DESeq2 will set up the input required for analysis by storing all these 3 things together
+
+```{r}
+dds <-DESeqDataSetFromMatrix(countData = counts,colData = metadata,design = ~dex)
+```
+
+The main function in DeSeq2 that runs the analysis is called DESeq()
+
+```{r}
+dds <-DESeq(dds)
+```
+
+
+```{r}
+res <-results(dds)
+head(res)
+```
+## Volcano plot 
+
+This a common summary figure from these types of expiriments and plot the log2fold change vs the adjusted p value 
+
+```{r}
+plot(res$log2FoldChange, -log(res$padj))
+abline(v=c(-2,2),col="red")
+abline(h=-log(0.04), col="red")
+```
+
+
+## Save our results
+
+```{r}
+write.csv(res,file="my_results_csv")
+```
+
