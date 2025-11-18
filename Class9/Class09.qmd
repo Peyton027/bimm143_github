@@ -1,0 +1,257 @@
+---
+title: "Class09Lab"
+author: "Peyton Chiu (PID:A18145937)"
+format: 
+toc: true
+---
+
+The main database for structural biology is called the PDB. Let's havve a look at what it contains.
+
+Download CS file from the PDB site accessible from :“Analyze” > “PDB Statistics” > “by Experimental Method and Molecular Type” “Analyze” > “PDB Statistics” > “by Experimental Method and Molecular Type” 
+
+```{r}
+pdb.df <- read.csv("Data Export Summary.csv")
+
+
+```
+
+
+```{r pdbstats, message =FALSE}
+library(readr)
+pdb.df <-read_csv("Data Export Summary.csv")
+pdb.df
+```
+
+>Q1: What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy.Give your answers in two sig figs 
+
+```{r}
+total_structures <- sum(pdb.df$Total)
+n.Xray <- sum(pdb.df$`X-ray`)
+ans1 <-n.Xray/total_structures * 100
+
+
+
+n.EM <- sum(pdb.df$EM)
+ans2<-n.EM/total_structures * 100
+
+
+```
+
+There are `r round(ans1,2)` percent X-ray structures in the PDB and there are `r round(ans2,2)` percent EM sturtures.
+
+>Q2: What proportion of structures in the PDB are protein?
+
+```{r}
+total_structures <- sum(pdb.df$Total)
+total_protein <- pdb.df[1,9]
+protein_prop <- total_protein/total_structures
+protein_prop
+
+```
+
+86.05% of all the structures are protein
+
+>Q3: Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?
+
+There are 1,150 HIV-1 protease structures
+
+
+## Exploring PDB structures 
+
+Package for structural infomatics 
+```{r}
+library(bio3d)
+hiv<- read.pdb("1hsg")
+hiv
+
+```
+
+Let's first use Mol* viewer tp explore this structure 
+
+
+![My first view of HIV-Pr](1HSG.png)
+
+>Q4: Water molecules normally have 3 atoms. Why do we see just one atom per water molecule in this structure
+
+
+>Q5: There is a critical “conserved” water molecule in the binding site. Can you identify this water molecule? What residue number does this water molecule have
+
+
+>Q6: Generate and save a figure clearly showing the two distinct chains of HIV-protease along with the ligand. You might also consider showing the catalytic residues ASP 25 in each chain and the critical water (we recommend “Ball & Stick” for these side-chains). Add this figure to your Quarto document.
+
+
+
+
+## PDB objects in R 
+```{r}
+head(hiv$atom)
+
+```
+
+
+Extract sequence 
+```{r}
+
+pdbseq(hiv)
+```
+
+
+
+
+```{r}
+chainA_Seq <-pdbseq(trim.pdb(hiv, chain ="A"))
+```
+
+I can interactively views these PBDs in R with the **bio3d** package. This is not yet on CRAN.
+
+To install this I can set up **pak** and run the following 
+pak::pak("bioboot/bio3dview")
+
+```{r}
+library(bio3dview)
+view.pdb(hiv)
+```
+
+```{r}
+library(bio3d)
+sel <- atom.select(hiv,resno=25)
+
+view.pdb(hiv, highlight =sel,
+         highlight.style ="spacefill", 
+         colorScheme = "chain",
+         col =c("blue","orange"),
+         backgroundColor = "pink")
+```
+## Predict flexibility 
+
+We can run a bioinfomatics calculation to predict protein dynamics i.e. functional motions 
+
+
+We will use the `nma` function 
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+```{r}
+m <-nma(adk)
+plot(m)
+```
+Generate a 'trajectory' of predicted motion
+
+```{r}
+mktrj(m,file ="ADK_nma.pdb")
+```
+
+```{r}
+view.nma(m)
+```
+
+##  Comparative structure analysis of Adenylate Kinase
+
+
+To start the session we to need to install several packages via console. These are bio3d,bio3dview,msa, and NGLVieweR
+
+
+>Q10: Which of the packages above is found only on BioConductor and not CRAN?
+
+msa is the package found only in Bioconductor 
+
+>Q11:Which of the above packages is not found on BioConductor or CRAN?
+
+bio3dview is the package not found on CRAN or Bioconductor 
+
+>Q12. True or False? Functions from the pak package can be used to install packages from GitHub and BitBucket?
+
+True
+
+
+
+Searching and retrieving ADK structures 
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+aa
+```
+
+
+>Q13. How many amino acids are in this sequence, i.e. how long is this sequence? 
+
+The sequence has 214 positions so it has 214 amino acids 
+
+```{r}
+hits <- NULL
+hits$pdb.id <- c('1AKE_A','6S36_A','6RZE_A','3HPR_A','1E4V_A','5EJE_A','1E4Y_A','3X2S_A','6HAP_A','6HAM_A','4K46_A','3GMT_A','4PZL_A')
+```
+
+Downloading the identified structures from Blast 
+
+```{r}
+library(bio3d)
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+```{r}
+pdbs <- pdbaln(files, fit = TRUE, exefile="msa")
+```
+
+
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+plot(pdbs, labels=ids)
+```
+
+
+Annotating the PDB structures 
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+```
+
+
+PCA 
+```{r}
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+```{r}
+rd <- rmsd(pdbs)
+
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k=3)
+
+plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
