@@ -1,7 +1,7 @@
 ---
 title: "Class07Lab"
 author: "Peyton Chiu (PID:A18145937)"
-format: pdf
+format: gfm
 editor: visual
 ---
 
@@ -79,7 +79,7 @@ plot(x, col =grps)
 
 # Principal Component Analysis (PCA)
 
-## PCA of UK food data 
+## PCA of UK food data
 
 Read data from website and try a few visualizations
 
@@ -186,7 +186,7 @@ barplot(pca$rotation[,2], las = 2)
 
 The two food groups that feature prominently are Soft drinks and Fresh potatos. PC2 mainly tells us about differences between countries in their consumption of these foods a country with a high PC2 score will consume more Soft_drinks, while one with a low PC2 score will consume more Fresh_potatoes.
 
-## PCA of RNA-Seq Data 
+## PCA of RNA-Seq Data
 
 Read data from website
 
