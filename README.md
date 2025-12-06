@@ -8,10 +8,11 @@ Classwork for [BIMM 143 at UC San Diego](https://bioboot.github.io/bimm143_F25/)
 - Class 08 [Breast Cancer Analysis Mini Project](class8/Lab Class08 (ML Mini Project).md)
 - Class 09 [Structural Bioinfomatics Pt1]()
 - Class 10 [Halloween Mini Project](class10/class10.md)
-- Class 11
-- Class 12
-- Class 13
-- Class 14
-- Class 15
-- Class 16
+- Class 11 [Structural Bioinformatics (pt2)]()
+- Class 12 [Genome informatics ]()
+- Class 13 [Transcriptomics and the analysis of RNA-Seq data]()
+- Class 14 [RNA-Seq analysis mini-project]()
+- Class 15 [Git and Github]()
+- Class 16 [Essential UNIX for bioinformatics]()
+- Class 17 [Mini Project: Investigating Pertussis Resurgence]()
 
