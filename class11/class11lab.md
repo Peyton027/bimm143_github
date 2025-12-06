@@ -1,0 +1,183 @@
+# Class 11: Structural Bioinfomatics pt2
+Peyton Chiu (PID:A18145937)
+
+## Alphafold Data Base (AFDB)
+
+The EBI maintains the largest database of Alphafold structure prediction
+models at https://alphafold.ebi.ac.uk/
+
+From last class we saw that the PDB had 244290 (Oct 2025)
+
+The total number of protein seqeuences in UniProtKB is 199,579,901
+
+> Key point: Ths is a tiny fraction of sequence space that has
+> structural coverage
+
+``` r
+244290/199579901 * 100
+```
+
+    [1] 0.1224021
+
+AFDB is attempting to address this gap
+
+There are two quality scores from Alphafold, one for residues (amino
+acids) called pLDDT distribution. The other PAE score measures the
+confidence in the relative position of the two residues(a score for
+every pair of residues)
+
+## Generating your own structure predictions
+
+Figure of 5 general HIV-PR models ![](s1.png)
+
+![](s2.png)
+
+![](s3.png) ![](S4.png) ![](S5.png)
+
+And the top ranked model
+
+![](Top%20model.png)
+
+pLDDT score for model 1 ![](ppdltTop.png)
+
+and model 5
+
+![](ppdltBot.png)
+
+# Custom Analysis of resulting models in R
+
+Read key results files into R. The first thing I need to know is what my
+results directory folder is called
+
+``` r
+results.dir <- "HIVPR_dimer_23119.result"
+
+# File names for all PDB models
+pdb_files <- list.files(path=results.dir,
+                        pattern="*.pdb",
+                        full.names = TRUE)
+
+# Print our PDB file names
+basename(pdb_files)
+```
+
+    [1] "HIVPR_dimer_23119_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_000.pdb"
+    [2] "HIVPR_dimer_23119_unrelaxed_rank_002_alphafold2_multimer_v3_model_1_seed_000.pdb"
+    [3] "HIVPR_dimer_23119_unrelaxed_rank_003_alphafold2_multimer_v3_model_5_seed_000.pdb"
+    [4] "HIVPR_dimer_23119_unrelaxed_rank_004_alphafold2_multimer_v3_model_2_seed_000.pdb"
+    [5] "HIVPR_dimer_23119_unrelaxed_rank_005_alphafold2_multimer_v3_model_3_seed_000.pdb"
+
+``` r
+library(bio3d)
+```
+
+    Warning: package 'bio3d' was built under R version 4.4.3
+
+``` r
+# Read all data from Models 
+#  and superpose/fit coords
+pdbs <- pdbaln(pdb_files, fit=TRUE, exefile="msa")
+```
+
+    Reading PDB files:
+    HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_000.pdb
+    HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_002_alphafold2_multimer_v3_model_1_seed_000.pdb
+    HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_003_alphafold2_multimer_v3_model_5_seed_000.pdb
+    HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_004_alphafold2_multimer_v3_model_2_seed_000.pdb
+    HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_005_alphafold2_multimer_v3_model_3_seed_000.pdb
+    .....
+
+    Extracting sequences
+
+    pdb/seq: 1   name: HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_001_alphafold2_multimer_v3_model_4_seed_000.pdb 
+    pdb/seq: 2   name: HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_002_alphafold2_multimer_v3_model_1_seed_000.pdb 
+    pdb/seq: 3   name: HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_003_alphafold2_multimer_v3_model_5_seed_000.pdb 
+    pdb/seq: 4   name: HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_004_alphafold2_multimer_v3_model_2_seed_000.pdb 
+    pdb/seq: 5   name: HIVPR_dimer_23119.result/HIVPR_dimer_23119_unrelaxed_rank_005_alphafold2_multimer_v3_model_3_seed_000.pdb 
+
+## RMSD heat map
+
+``` r
+rd <- rmsd(pdbs, fit=T)
+```
+
+    Warning in rmsd(pdbs, fit = T): No indices provided, using the 198 non NA positions
+
+``` r
+range(rd)
+```
+
+    [1]  0.000 14.754
+
+``` r
+library(pheatmap)
+```
+
+    Warning: package 'pheatmap' was built under R version 4.4.3
+
+``` r
+colnames(rd) <- paste0("m",1:5)
+rownames(rd) <- paste0("m",1:5)
+pheatmap(rd)
+```
+
+![](class11lab_files/figure-commonmark/unnamed-chunk-3-1.png)
+
+## Residue Conservation from alignment file
+
+``` r
+aln_file <- list.files(path=results.dir,
+                       pattern=".a3m$",
+                        full.names = TRUE)
+aln_file
+```
+
+    [1] "HIVPR_dimer_23119.result/HIVPR_dimer_23119.a3m"
+
+``` r
+aln <- read.fasta(aln_file[1], to.upper = TRUE)
+```
+
+    [1] " ** Duplicated sequence id's: 101 **"
+    [2] " ** Duplicated sequence id's: 101 **"
+
+How many sequences in this file
+
+``` r
+dim(aln$ali)
+```
+
+    [1] 5397  132
+
+Scoring residue conservation
+
+``` r
+sim <- conserv(aln)
+```
+
+``` r
+pdb <- read.pdb("1hsg")
+```
+
+      Note: Accessing on-line PDB file
+
+``` r
+plotb3(sim[1:99], sse=trim.pdb(pdb, chain="A"),
+       ylab="Conservation Score")
+```
+
+![](class11lab_files/figure-commonmark/unnamed-chunk-8-1.png)
+
+``` r
+con <- consensus(aln, cutoff = 0.9)
+con$seq
+```
+
+      [1] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+     [19] "-" "-" "-" "-" "-" "-" "D" "T" "G" "A" "-" "-" "-" "-" "-" "-" "-" "-"
+     [37] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+     [55] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+     [73] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+     [91] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+    [109] "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-" "-"
+    [127] "-" "-" "-" "-" "-" "-"
